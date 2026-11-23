@@ -1,0 +1,96 @@
+{
+ "_comment": "実績のある値の例（130BPM・109小節・8行事・約3分21秒。行事名・文言は架空）。新しい案件ではこれを data/show.json にコピーして書き換える。小節番号はすべて data/beats.json の小節（1始まり）",
+ "project": {"name": "slideshow", "width": 1920, "height": 1080, "fps": 30},
+ "photos": {
+  "source_root": "~/Pictures/slideshow",
+  "events": [
+   {"key": "01_start", "folder": "04 始業", "date": "04.08", "title": "はじまり"},
+   {"key": "02_picnic", "folder": "05 遠足", "date": "05.10", "title": "遠足"},
+   {"key": "03_practice", "folder": "05 運動会練習", "date": "05.20", "title": "運動会練習"},
+   {"key": "04_sports", "folder": "05 運動会", "date": "05.27", "title": "運動会"},
+   {"key": "05_chorus", "folder": "06 合唱コンクール", "date": "06.14", "title": "合唱コンクール"},
+   {"key": "06_festival", "folder": "09 文化祭", "date": "09", "title": "文化祭"},
+   {"key": "07_lecture", "folder": "10 講演会", "date": "10.15", "title": "講演会"},
+   {"key": "08_exchange", "folder": "10 国際交流", "date": "10.22", "title": "国際交流"}
+  ],
+  "exclude_videos": ["full.mp4"]
+ },
+ "music": {
+  "file": "assets/bpm/song.mp3",
+  "bpm_hint": 130,
+  "downbeat_offset_beats": 0,
+  "last_bar": 108,
+  "gain_db": -0.7,
+  "fade_in_sec": 0.5,
+  "fade_out_sec": 0.3
+ },
+ "sections": [
+  {"name": "S1", "start_bar": 1, "in": "cut", "label": "イントロ〜Aメロ"},
+  {"name": "S2", "start_bar": 12, "in": "dissolve", "label": "Aメロ〜Bメロ"},
+  {"name": "S3", "start_bar": 27, "in": "flash", "label": "サビ1"},
+  {"name": "S4", "start_bar": 44, "in": "dissolve", "label": "間奏〜Aメロ2〜Bメロ2"},
+  {"name": "S5", "start_bar": 60, "in": "shake", "label": "サビ2"},
+  {"name": "S6a", "start_bar": 83, "in": "dissolve", "label": "Cメロ"},
+  {"name": "S6b", "start_bar": 93, "in": "cut", "label": "ラスサビ"},
+  {"name": "S7", "start_bar": 101, "in": "under_grid", "label": "アウトロ"}
+ ],
+ "chorus_bars": [27, 60, 93],
+ "end_black_bar": 109,
+ "cut_offset": -1,
+ "transitions": {
+  "flash": [27],
+  "shake": [31, 35, 39, 41, 60, 64, 68, 78],
+  "dissolve_long": [8, 12, 14, 16, 17, 18, 19, 20, 44, 46, 48, 50, 52, 54, 56, 83, 85, 87, 89, 90, 91, 103, 105],
+  "dissolve_short": [21, 22, 23, 24, 25, 58, 59]
+ },
+ "backgrounds": [
+  {"id": "G-01", "section": "S1", "bar": 1, "bars": 7, "file": "work/graphics/bg/G-01.jpg", "start_at_zero": true, "fade_in_bars": [1, 3]},
+  {"id": "G-03", "section": "S6a", "bar": 83, "bars": 2, "file": "work/graphics/bg/G-03.jpg"},
+  {"id": "G-02", "section": "S7", "bar": 105, "bars": 4, "file": "work/graphics/bg/G-02.jpg"}
+ ],
+ "kb_overrides": [
+  {"bar": 101, "start_early": true, "scale": [1.10, 1.38], "position": [[960, 540], [960, 470]]},
+  {"bar": 103, "scale": [1.0, 1.04], "position": [[960, 540], [960, 540]]}
+ ],
+ "graphics": {
+  "fonts": {"title": "HiraMinProN-W6", "chapter": "HiraMaruProN-W4"},
+  "title_ink": [78, 42, 26],
+  "title_glow": [255, 246, 232],
+  "titles": [
+   {"name": "OP1", "text": "3年間の、最後の1年。", "bar": 3, "bars": 3, "reveal_bars": 1, "pos": [960, 540]},
+   {"name": "OP2", "text": "○○年度　○○中学校　3年○組", "bar": 6, "bars": 2, "reveal_bars": 0.75, "pos": [960, 540]},
+   {"name": "S6A_TITLE", "text": "3年○組のみんな", "bar": 83, "bars": 2, "reveal_bars": 0.75, "pos": [960, 540]},
+   {"name": "ED1", "text": "そして ― 次の春へ。", "bar": 105, "bars": 2, "reveal_bars": 0.75, "pos": [760, 430]},
+   {"name": "ED2", "text": "つづく", "bar": 107, "bars": 2, "reveal_bars": 0.5, "pos": [960, 540]}
+  ],
+  "chapters": [
+   {"name": "CH1", "date": "04.08", "event": "はじまり", "bar": 12},
+   {"name": "CH2", "date": "05.10", "event": "遠足", "bar": 14},
+   {"name": "CH3", "date": "05.20", "event": "運動会練習", "bar": 21},
+   {"name": "CH4", "date": "05.27", "event": "運動会", "bar": 25},
+   {"name": "CH5", "date": "06.14", "event": "合唱コンクール", "bar": 46},
+   {"name": "CH6", "date": "09", "event": "文化祭", "bar": 52},
+   {"name": "CH7", "date": "10.15", "event": "講演会", "bar": 72},
+   {"name": "CH8", "date": "10.22", "event": "国際交流", "bar": 76}
+  ],
+  "collages": [
+   {"name": "COLLAGE_S3", "section": "S3", "bar": 37},
+   {"name": "COLLAGE_S5", "section": "S5", "bar": 70}
+  ],
+  "leaks": [
+   {"name": "LEAK_S1", "bar": 1, "colors": [[1, 0.55, 0.2], [1, 0.8, 0.45]], "from_x": -500, "to_x": 2300, "y": 400},
+   {"name": "LEAK_S6A", "bar": 83, "colors": [[1, 0.6, 0.35], [1, 0.85, 0.6]], "from_x": 2400, "to_x": -400, "y": 300},
+   {"name": "LEAK_S7", "bar": 105, "colors": [[1, 0.5, 0.25], [1, 0.75, 0.4]], "from_x": -400, "to_x": 2200, "y": 500}
+  ],
+  "grid": {"start_bar": 96, "done_bar": 100, "end_bar": 101, "cols": 8, "rows": 6, "background": "work/graphics/bg/G-03.jpg"}
+ },
+ "looks": {
+  "sections": [
+   {"name": "LOOK_S4", "from_bar": 43, "to_bar": 61, "fade_bars": 1, "lumetri": {"saturation": 85}},
+   {"name": "LOOK_S6a", "from_bar": 82, "to_bar": 94, "fade_bars": 1, "lumetri": {"saturation": 85}},
+   {"name": "LOOK_S7", "from_bar": 100, "to_bar": null, "fade_bars": 1, "lumetri": {"temperature": 15, "saturation": 105}}
+  ],
+  "global": {"lumetri": {"temperature": 8, "saturation": 104}, "vignette": {"amount": -12}},
+  "grain": 2.5
+ }
+}
