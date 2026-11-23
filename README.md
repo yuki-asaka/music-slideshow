@@ -27,6 +27,24 @@
 | `list_clips.py` | ffprobe | 写真フォルダ内の動画の長さ・解像度を一覧にする |
 | `preview_selection.py` | ffmpeg | 選定の一覧画像に使うため、動画から1コマ取り出す |
 
+## テスト
+
+`tests/` に pytest のテストがあります。曲・写真・行事はすべてテストの中で合成したもので、実案件の素材は使いません。GitHub Actions で push のたびに実行します。
+
+```sh
+pip install -r requirements-test.txt
+pytest -q tests
+```
+
+| ファイル | 確かめること |
+|---|---|
+| `test_analyze_music.py` | 粗いテンポのヒントから正しいテンポを見つける、外れ値（半拍ずれ）を除いて格子を当てはめる、曲の終わりでも1フレーム以内。合成したクリック音で `analyze_music.py` を通しで動かし、`downbeat_offset_beats` で小節の頭が合うこと（ffmpeg が必要） |
+| `test_build_timeline.py` | 架空の3区間・12小節で、カットが拍の1フレーム前、ディゾルブの中央・白フラッシュの頂点・シェイクが拍ちょうど、区間ディゾルブのハンドル、暗い写真の露出補正、selection.csv の隙間・重なりの検出、切り出しの倍率の上限、Ken Burns の動き |
+| `test_shake_steps.py` | シェイクのキーフレームの時刻と値、前後が静止していること |
+| `test_check_cuts.py` | 拍に合ったカットは通り、ずれたカットは終了コード 1 になること（マスターと区間シーケンスの両方） |
+
+FilmCraft・EffectCraft を動かす部分（`apply_timeline.py`・`make_graphics.js`・`export.py`・`graphics_plan.py` の出力を使った書き出し）はテストできません。実案件では `check_cuts.py` とフレームの一覧（`export.py frames`）で確かめます。
+
 ## 注意
 
 写真・曲などの素材はこのリポジトリに含みません。写真を外部サービスに送らない運用を前提にしています。
