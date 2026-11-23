@@ -6,7 +6,8 @@ import pytest
 librosa = pytest.importorskip("librosa")
 sf = pytest.importorskip("soundfile")
 
-from analyze_music import best_period, fit_grid
+import analyze_music
+from analyze_music import OVERLAP_SEC, SEGMENT_SEC, best_period, detect_beats, fit_grid
 from conftest import run_script, write_json
 
 
@@ -73,3 +74,36 @@ def test_cli_on_click_track(tmp_path):
     info = analyze((4 - k) % 4)
     bar1 = info["bars"]["1"]["t"]
     assert np.abs(times[::4] - bar1).min() < 1 / 30
+
+
+def test_detect_beats_uses_bounded_segments_without_duplicates(monkeypatch):
+    """各区間は前後の余白を含めて区切られ、拍は区間の境目で二重にならない（librosa の拍検出は差し替える）"""
+    sr, bpm, dur = 1000, 120.0, 200.0
+    period = 60 / bpm
+    truth = np.arange(0, dur, period)
+    lengths = []
+
+    def fake_beat_track(y, sr, start_bpm, units):
+        # y の値は曲の頭からの秒（下で作る）。切り出した範囲の本当の拍を、区間の頭からの秒で返す
+        lengths.append(len(y) / sr)
+        a, b = y[0], y[-1] + 1 / sr
+        return start_bpm, truth[(truth >= a) & (truth < b)] - a
+
+    monkeypatch.setattr(analyze_music.librosa.beat, "beat_track", fake_beat_track)
+    beats = detect_beats(np.arange(int(dur * sr)) / sr, sr, bpm)
+    assert len(lengths) == len(np.arange(0, dur - 20, SEGMENT_SEC))
+    assert max(lengths) < SEGMENT_SEC + 20 + 2 * OVERLAP_SEC  # 最後の区間（20秒未満の残りを含む）でも曲の最後までにはならない
+    assert np.all(np.diff(beats) > period / 2)  # 二重の拍がない
+    assert len(beats) == len(truth)  # 拍を落としてもいない
+
+
+def test_detect_beats_on_long_click_track_has_no_duplicates():
+    # 130秒なら3区間（0・40・80秒から）。以前は各区間を曲の最後まで解析していたので、後半の拍が二重・三重に入っていた
+    bpm, first, sec, sr = 130.0, 0.5, 130, 22050
+    period = 60 / bpm
+    times = first + np.arange(int((sec - first - 1) / period)) * period
+    y = librosa.clicks(times=times, sr=sr, length=sec * sr, click_freq=1500)
+    beats = detect_beats(y, sr, bpm)
+    assert np.all(np.diff(beats) > period / 2)
+    assert len(beats) <= len(times)
+    assert len(beats) >= len(times) * 0.9

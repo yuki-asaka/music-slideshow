@@ -126,16 +126,71 @@ def test_dark_photo_gets_exposure_fix(timeline):
 
 def test_gap_in_selection_is_reported(tmp_path):
     make_project(tmp_path, slots=[s for s in SLOTS if s[1] != 3])
-    out, _ = build(tmp_path)
-    assert "隙間・重なり（selection.csv）" in out
-    assert "problems 0" not in out
+    r = run_script("build_timeline.py", cwd=tmp_path)
+    assert "隙間・重なり（selection.csv）" in r.stdout
+    assert "problems 0" not in r.stdout
+    assert r.returncode == 1  # 問題があれば次の手順（apply_timeline.py）に進めないよう、失敗で終わる
+    assert (tmp_path / "data" / "timeline.json").exists()  # 調べられるように timeline.json は書く
 
 
 def test_overlap_in_selection_is_reported(tmp_path):
     slots = [s if s[1] != 2 else ("S1", 2, 2) for s in SLOTS]
     make_project(tmp_path, slots=slots)
-    out, _ = build(tmp_path)
-    assert "隙間・重なり（selection.csv）" in out
+    r = run_script("build_timeline.py", cwd=tmp_path)
+    assert "隙間・重なり（selection.csv）" in r.stdout
+    assert r.returncode == 1
+
+
+def test_v1_clips_run_until_next_clip(timeline):
+    # 区間の中の V1 は、次のクリップの頭までちょうど続く（ディゾルブ・シェイクで入るクリップの前も隙間なし）
+    _, tl, _, _ = timeline
+    for sec in ("S1", "S2", "S3"):
+        v1 = sorted((c for c in tl["clips"] if c["section"] == sec and c["track"] == "V1"), key=lambda c: c["start"])
+        for a, b in zip(v1, v1[1:]):
+            assert a["end"] == b["start"], (a["id"], b["id"])
+
+
+def make_portrait_video(tmp_path, size=None, bar=3):
+    """make_project のあと、小節 bar の写真を縦向きの動画に差し替える。size を渡したら data/clips.csv に書く"""
+    path = tmp_path / "data" / "selection.csv"
+    rows = list(csv.DictReader(open(path)))
+    src = str(tmp_path / "movies" / "portrait.mov")
+    for r in rows:
+        if float(r["bar"]) == bar:
+            r.update(kind="video", id="VID-1", file=src, note="source_in=1.5s 縦向き")
+    with open(path, "w", newline="") as fp:
+        w = csv.DictWriter(fp, COLS)
+        w.writeheader()
+        w.writerows(rows)
+    if size:
+        with open(tmp_path / "data" / "clips.csv", "w", newline="") as fp:
+            w = csv.writer(fp)
+            w.writerow(["folder", "src", "width", "height", "fps", "rotation", "orientation", "duration", "audio", "slow_ok"])
+            w.writerow(["movies", src, *size, 30.0, -90, "portrait", 5.0, False, False])
+
+
+@pytest.mark.parametrize("size, scale", [((1080, 1920), 56.25), ((1080, 1440), 75.0), ((720, 1280), 84.375)])
+def test_portrait_video_fits_inside_frame(tmp_path, size, scale):
+    make_project(tmp_path)
+    make_portrait_video(tmp_path, size)
+    _, tl = build(tmp_path)
+    fg = next(c for c in tl["clips"] if c.get("role") == "portrait_fg")
+    bg = next(c for c in tl["clips"] if c.get("role") == "portrait_bg")
+    assert fg["track"] == "V2" and bg["track"] == "V1"
+    assert fg["source_in"] == 1.5
+    assert fg["fit_scale"] == pytest.approx(scale)
+    # 動画全体が画面に収まり、高さがちょうど画面の高さになる
+    w, h = size[0] * fg["fit_scale"] / 100, size[1] * fg["fit_scale"] / 100
+    assert w <= 1920 and h == pytest.approx(1080)
+    assert "fit_scale" not in bg  # 背景は画面を埋める（fillFrame）
+
+
+def test_portrait_video_with_unknown_size_is_reported(tmp_path):
+    make_project(tmp_path)
+    make_portrait_video(tmp_path)  # clips.csv がなく、動画のファイルもない
+    r = run_script("build_timeline.py", cwd=tmp_path)
+    assert "縦向き動画の大きさが分からない: VID-1" in r.stdout
+    assert r.returncode == 1
 
 
 def test_crop_zoom_is_capped_and_stays_inside_frame():

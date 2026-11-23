@@ -10,7 +10,11 @@
   dissolve : 拍を中央にクロスディゾルブ（dissolve_long 28 / dissolve_short 7 フレーム）
   shake    : 拍ちょうどで切り、前後をキーフレームで揺らす（shake_steps.py の値）
   flash    : 拍の1フレーム前で切り、白の頂点を拍に置く
-使い方: build_timeline.py [--show data/show.json] [--selection data/selection.csv] [--out data/timeline.json]
+縦向きの動画は data/clips.csv（list_clips.py）の幅・高さから、画面に収まる倍率（fit_scale）を出す。
+clips.csv にない動画は ffprobe で調べる。
+検査（重なり・長さ0・selection.csv の隙間・縦向き動画の大きさ）で問題があれば終了コード 1（timeline.json は書く）。
+使い方: build_timeline.py [--show data/show.json] [--selection data/selection.csv] [--clips data/clips.csv]
+        [--out data/timeline.json]
 """
 import argparse, csv, json, math, sys
 from pathlib import Path
@@ -114,6 +118,25 @@ def tone(path):
     return 0.2126 * r + 0.7152 * g_ + 0.0722 * b, r - b
 
 
+def load_media_sizes(path):
+    """list_clips.py の data/clips.csv から {元のパス: (幅, 高さ)}。幅・高さは回転を反映した表示上の大きさ"""
+    if not Path(path).exists():
+        return {}
+    with open(path) as f:
+        return {r["src"]: (int(r["width"]), int(r["height"])) for r in csv.DictReader(f)}
+
+
+def media_size(file, sizes):
+    if file in sizes:
+        return sizes[file]
+    try:
+        from list_clips import probe
+        info = probe(file)
+        return info["width"], info["height"]
+    except Exception:
+        return None
+
+
 def match_tone(clips, sections):
     photos = [c for c in clips if c["kind"] == "photo"]
     for c in photos:
@@ -147,6 +170,7 @@ def main():
     ap.add_argument("--selection", default="data/selection.csv")
     ap.add_argument("--beats", default="data/beats.json")
     ap.add_argument("--hits", default="data/hits.json")
+    ap.add_argument("--clips", default="data/clips.csv")
     ap.add_argument("--out", default="data/timeline.json")
     args = ap.parse_args()
     show = json.loads(Path(args.show).read_text())
@@ -205,9 +229,10 @@ def main():
     grid = gfx_cfg.get("grid")
     if grid:
         covers.append((g.frame(grid["start_bar"]) - 1, g.frame(grid["end_bar"]) - PRE))
+    # selection.csv の隙間は最後に検査するので、V1 は次のクリップの頭まで続ける（ディゾルブで入る次のクリップは
+    # 拍ちょうどに始まるので、スロットの終わり＋cut_offset で切ると1フレームの隙間ができる）
     for k, c in enumerate(clips):
         nxt = clips[k + 1]["start"] if k + 1 < len(clips) else total
-        own_end = g.frame(c["bar"] + c["bars"]) + (cut_offset if c["bar"] + c["bars"] not in shake_bars else 0)
         end = nxt
         for a, b in covers:
             if c["start"] < a <= nxt:
@@ -216,7 +241,7 @@ def main():
         if bg and bg.get("start_at_zero"):
             end = g.frame(c["bar"] + c["bars"])
             c["start"] = 0
-        c["end"] = min(end, max(own_end, end)) if c["kind"] != "image" else end
+        c["end"] = end
     # グリッドの下で始まるクリップ（グリッドが溶けて見える）
     for c in clips:
         o = overrides.get(c["bar"])
@@ -283,14 +308,20 @@ def main():
         c.pop("note", None)
         c.pop("_bg", None)
 
-    # 縦向きの動画の背景（ぼかし）
-    extra = []
+    # 縦向きの動画の背景（ぼかし）。前景は動画全体が画面に収まる倍率（%）で置く
+    extra, size_problems = [], []
+    sizes = load_media_sizes(args.clips)
     for c in clips:
         if c["portrait"]:
             bg = {**c, "track": "V1", "role": "portrait_bg", "keys": {"scale": [(c["visible"][0], 1.0), (c["visible"][1], 1.0)],
                   "position": [(c["visible"][0], [W / 2, H / 2]), (c["visible"][1], [W / 2, H / 2])]}}
             c["track"] = "V2"
             c["role"] = "portrait_fg"
+            sz = media_size(c["file"], sizes)
+            if sz:
+                c["fit_scale"] = round(min(W / sz[0], H / sz[1]) * 100, 3)
+            else:
+                size_problems.append(c["id"])
             extra.append(bg)
     clips += extra
 
@@ -391,9 +422,13 @@ def main():
         if abs(b0 + n0 - b1) > 1e-6:
             print(f"隙間・重なり（selection.csv）: {i0} 小節{b0}+{n0} → {i1} 小節{b1}")
             bad += 1
+    for i in size_problems:
+        print(f"縦向き動画の大きさが分からない: {i}（list_clips.py で data/clips.csv を作るか、ffprobe で読めるパスにする）")
+        bad += 1
     print(f"clips {len(clips)} overlays {len(overlays)} adjust {len(adjust)} markers {len(markers)} problems {bad}")
     for s in sections:
         print(f"  {s['name']:4s} {s['start']:5d}-{s['end']:5d} origin {s['origin']} in={s['in']}")
+    sys.exit(1 if bad else 0)
 
 
 if __name__ == "__main__":

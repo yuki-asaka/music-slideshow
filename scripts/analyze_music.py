@@ -16,15 +16,22 @@ import librosa
 import numpy as np
 
 SEGMENT_SEC = 40
+OVERLAP_SEC = 5  # 区間の前後に足す余白。拍検出は区間の端で不安定なので、余白で検出して区間の中の拍だけを使う
 
 
 def detect_beats(y, sr, bpm):
+    """約40秒ごとの区間に分けて拍を検出し、つなげる。区間どうしは重ならないので、同じ拍が二重に入らない。
+    最後の区間が20秒未満になるときは、その前の区間に含める"""
     beats = []
     dur = len(y) / sr
-    for st in np.arange(0, max(dur - 20, 1), SEGMENT_SEC):
-        _, b = librosa.beat.beat_track(y=y[int(st * sr):], sr=sr, start_bpm=bpm, units="time")
-        beats.append(b + st)
-    return np.concatenate(beats)
+    starts = list(np.arange(0, max(dur - 20, 1), SEGMENT_SEC))
+    for i, st in enumerate(starts):
+        en = starts[i + 1] if i + 1 < len(starts) else dur
+        a, b = max(0.0, st - OVERLAP_SEC), min(dur, en + OVERLAP_SEC)
+        _, bt = librosa.beat.beat_track(y=y[int(a * sr):int(b * sr)], sr=sr, start_bpm=bpm, units="time")
+        bt = bt + a
+        beats.append(bt[(bt >= st) & (bt < en)])
+    return np.sort(np.concatenate(beats))
 
 
 def best_period(beats, bpm):

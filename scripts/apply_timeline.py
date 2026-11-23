@@ -184,7 +184,9 @@ def main():
             cid = clip_id[("clip", id(c))]
             b = base.get(id(c), 100.0)
             if c.get("role") == "portrait_fg":
-                b = 1080 / 1440 * 100  # 縦向き 1080×1440 を高さに合わせる
+                if "fit_scale" not in c:
+                    sys.exit(f"{c['id']}: fit_scale がない（build_timeline.py を実行し直す）")
+                b = c["fit_scale"]  # 動画全体が画面に収まる倍率（build_timeline.py が動画の大きさから出す）
             src = int(round(c["source_in"] * TICKS)) if c["kind"] == "video" else 0
             idx = 3
             fx = {}
