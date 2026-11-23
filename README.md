@@ -15,6 +15,18 @@
 - librosa（曲の解析）
 - FilmCraft（`filmcraft-cli`）と EffectCraft の MCP
 
+## ffmpeg・ffprobe の使いどころ
+
+動画の書き出し・編集はすべて FilmCraft（`filmcraft-cli`）が行います。ffmpeg・ffprobe は計測と確認の補助にだけ使います。
+
+| スクリプト | ツール | 用途 |
+|---|---|---|
+| `analyze_music.py` | ffmpeg（`ebur128` フィルタ） | 曲の音量（LUFS）を測る。この値から −14 LUFS 前後になるように音量の調整（`gain_db`）を決める |
+| `export.py` | ffprobe | 書き出した動画の長さ・解像度・形式を確かめる |
+| `export.py` | ffmpeg（`ebur128`） | 書き出した動画の音量とピークを測る |
+| `list_clips.py` | ffprobe | 写真フォルダ内の動画の長さ・解像度を一覧にする |
+| `preview_selection.py` | ffmpeg | 選定の一覧画像に使うため、動画から1コマ取り出す |
+
 ## 注意
 
 写真・曲などの素材はこのリポジトリに含みません。写真を外部サービスに送らない運用を前提にしています。
